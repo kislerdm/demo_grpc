@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "github.com/kislerdm/demo-grcp/app";
+
+package app;
+
+// Calculator definition.
+service Calculator {
+    // Runs fibonacci numbers calculation.
+    rpc Fibonacci(Req) returns (Resp) {}
+    // // Runs factorial calculation.
+    rpc Factorial(Req) returns (Resp) {}
+}
+
+// The request message which contains the integer.
+message Req {
+    int64 n = 1;
+}
+
+// The response.
+message Resp {
+    int64 result = 1;
+}
