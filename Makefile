@@ -1,27 +1,35 @@
 SHELL := /bin/bash
 
-DIR_BIN := $(PWD)/bin
-APP := server
+DIR_PROTO_BE := $(PWD)/backend/proto
+DIR_PROTO_FE := $(PWD)/frontend/client/proto
 
 help: ## Prints help message.
 	@ grep -h -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[1m%-30s\033[0m %s\n", $$1, $$2}'
 
-proto: ## Compile protobuf.
-	@ protoc --go_out=. --go_opt=paths=source_relative \
-		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+proto-backend: ## Compile protobuf for the backend.
+	@ test -d $(DIR_PROTO_BE) || mkdir $(DIR_PROTO_BE)
+	@ protoc --go_out=$(DIR_PROTO_BE) --go_opt=paths=source_relative \
+		--go-grpc_out=$(DIR_PROTO_BE) --go-grpc_opt=paths=source_relative \
 		./app.proto
 
-build: ## builds the binary for the local arch. Set APP variable to "server", or "client" to build the right app (default: server).
-	@ test -d $(DIR_BIN) || mkdir $(DIR_BIN)
-	@ CGO_ENABLED=0 GOARCH=$(uname -m) GOOS=$(uname) go build -a -gcflags=all="-l -B -C" -ldflags="-w -s" -o $(DIR_BIN)/$(APP) ./cmd/$(APP)/*.go
+proto-frontend: ## Compile protobuf for the frontend.
+	@ test -d $(DIR_PROTO_FE) || mkdir $(DIR_PROTO_FE)
+	@ protoc --js_out=$(DIR_PROTO_FE) --js_opt=paths=source_relative \
+		--js-grpc_out=$(DIR_PROTO_FE) --js-grpc_opt=paths=source_relative \
+		./app.proto
 
-test: ## Runs tests.
-	@ go test -v ./...
+build-backend: proto-backend ## builds the binary for the local arch of the backend.
+	@ cd $(PWD)/backend \
+		&& test -d bin || mkdir bin \
+		&& CGO_ENABLED=0 GOARCH=$(uname -m) GOOS=$(uname) go build -a -gcflags=all="-l -B -C" -ldflags="-w -s" -o ./bin/runner *.go
 
-run: ## Launches the compiled binary. Set APP variable to "server", or "client" to build the right app (default: server).
-	@ $(DIR_BIN)/$(APP)
+test-backend: ## Runs tests for the backend.
+	@ go test -v ./backend/...
 
-compress: ## Compresses binary with upx. Set APP variable to "server", or "client" to build the right app (default: server).
-	@ upx -9 --brute $(DIR_BIN)/$(APP)
+run-backend: ## Launches the compiled binary for the backend.
+	@ ./backend/bin/runner
+
+compress: ## Compresses binary with upx.
+	@ upx -9 --brute ./backend/bin/runner
 
 .DEFAULT_GOAL := help
